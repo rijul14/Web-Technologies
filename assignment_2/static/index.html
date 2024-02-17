@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+    <title>Stock Search</title>
+    <link rel="stylesheet" href="../static/css/index.css">
+</head>
+<body>
+	<div class="container">
+		<p id="title">Stock Search</p>
+	</div>
+	<div class="container">
+		<form id="search-form" class="search-bar" method="get">
+			<label for="search-input" class="search-icon-label">
+				<img src="../static/img/search-solid.svg" alt="Search" class="search-icon">
+			</label>
+			<input type="text" placeholder="Enter Stock Ticker Symbol" id="search-input" name="ticker" required>
+			<img src="../static/img/times-solid.svg" alt="Clear" class="clear-icon" onclick="clearText()">
+		</form>
+	</div>
+	<div id="tab-bar-and-results">
+		<div id="error-message" style="display: none;">
+			Error: No record has been found, please enter a valid symbol.
+		</div>
+		<div id="tab-bar">
+			<button class="tab-button" onclick="changeTab('company')">Company</button>
+			<button class="tab-button" onclick="changeTab('stock')">Stock Summary</button>
+			<button class="tab-button" onclick="changeTab('charts')">Charts</button>
+			<button class="tab-button" onclick="changeTab('news')">Latest News</button>
+		</div>
+
+		<div id="company-content" class="tab-content">
+		</div>
+
+		<div id="stock-content" class="tab-content" style="display: none;">
+		</div>
+
+		<div id="charts-content" class="tab-content" style="display: none;">
+		</div>
+
+		<div id="news-content" class="tab-content" style="display: none;">
+		</div>
+	</div>
+
+	<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+	<!-- <script src="https://code.highcharts.com/highcharts.js"></script> -->
+	<script src="https://code.highcharts.com/stock/highstock.js"></script>
+	<script src="https://code.highcharts.com/modules/exporting.js"></script>
+
+	<script>
+		var allData = {};
+		document.addEventListener('DOMContentLoaded', function() {
+			var searchForm = document.querySelector("#search-form");
+			var searchInput = document.querySelector("#search-input");
+			document.querySelector(".search-icon-label").onclick = executeSearch;
+			searchInput.addEventListener("keypress", function(event) {
+				if (event.key === "Enter") {
+					event.preventDefault(); 
+					executeSearch();
+				}
+			});
+
+			function executeSearch() {
+				if (!searchInput.checkValidity()) {
+					searchInput.reportValidity();
+				} else {
+					allData = {};
+					var ticker = searchInput.value;
+					var urls = {
+						company: `/company?ticker=${ticker}`,
+						stock: `/stock?ticker=${ticker}`,
+						rec: `/rec?ticker=${ticker}`,
+						charts: `/charts?ticker=${ticker}`,
+						news: `/news?ticker=${ticker}`
+					};
+
+					Object.keys(urls).forEach(function(key) {
+						var xhr = new XMLHttpRequest();
+						xhr.open("GET", urls[key], true);
+						xhr.onload = function () {
+							if (xhr.status >= 200 && xhr.status < 300) {
+								var response = JSON.parse(xhr.responseText);
+								allData[key] = response; 
+								if (Object.keys(response).length === 0) { 
+									document.getElementById('tab-bar').style.display = 'none';
+									document.getElementById('error-message').style.display = 'block';
+									document.getElementById('company-content').innerHTML = '';
+									document.getElementById('stock-summary-content').innerHTML = '';
+									document.getElementById('charts-content').innerHTML = '';
+									document.getElementById('latest-news-content').innerHTML = '';
+								}
+								else {
+									if (Object.keys(allData).length === Object.keys(urls).length) {
+										// console.log(allData);
+										displayTabData('company'); 
+									}
+								}
+							} 
+							else {
+								document.getElementById('tab-bar').style.display = 'none';
+								document.getElementById('error-message').style.display = 'block';
+								document.getElementById('company-content').innerHTML = '';
+								document.getElementById('stock-summary-content').innerHTML = '';
+								document.getElementById('charts-content').innerHTML = '';
+								document.getElementById('latest-news-content').innerHTML = '';
+							}
+						};
+						xhr.send();
+					}
+				)}
+			};
+			searchInput.oninput = function() {
+				searchInput.setCustomValidity("");
+			};
+
+			searchForm.onsubmit = function(event) {
+				// event.preventDefault();
+			};
+		});
+
+		function clearText() {
+			document.getElementById('search-input').value = ''; 
+			document.getElementById('tab-bar').style.display = 'none'; 
+			document.getElementById('error-message').style.display = 'none'; 
+			document.getElementById('company-content').innerHTML = '';
+			document.getElementById('stock-content').innerHTML = '';
+			document.getElementById('charts-content').innerHTML = '';
+			document.getElementById('news-content').innerHTML = '';
+		}
+
+		function displayTabData(tabName) {
+			document.getElementById('error-message').style.display = 'none';
+			document.getElementById('tab-bar').style.display = 'flex';
+
+			switch(tabName) {
+				case 'company':
+					createCompanyTable(allData['company']);
+					break;
+				case 'stock':
+					createStockSummaryTable(allData['stock'], allData['rec'], allData['company'].ticker);
+					break;
+				case 'charts':
+				
+				case 'news':
+				
+			}
+
+			changeTab(tabName); 
+		}
+
+		function changeTab(tabName) {
+			console.log(tabName);
+            var tabs = document.getElementsByClassName('tab-content');
+            for (var i = 0; i < tabs.length; i++) {
+                tabs[i].style.display = 'none';
+            }
+
+            var tabButtons = document.getElementsByClassName('tab-button');
+            for (var i = 0; i < tabButtons.length; i++) {
+                tabButtons[i].classList.remove('active');
+            }
+
+            document.getElementById(tabName + '-content').style.display = 'block';
+            document.querySelector('[onclick="changeTab(\'' + tabName + '\')"]').classList.add('active');
+			
+			if (allData[tabName]) { 
+				console.log("changeTab" + tabName);
+				if (tabName == 'company') {
+					createCompanyTable(allData['company']);
+				}
+				else if (tabName == 'stock') {
+					createStockSummaryTable(allData['stock'], allData['rec'], allData['company'].ticker);
+				}
+				else if (tabName == 'charts') {
+					createChart(allData['charts'], allData['company'].ticker);
+				}
+				else if (tabName == 'news') {
+					createNews(allData['news']);
+				}
+			}
+		}
+	
+		function createCompanyTable(data) {
+			var resultsDiv = document.getElementById("company-content");
+			resultsDiv.innerHTML = ''; 
+
+			if (data.logo) {
+				var img = document.createElement('img');
+				img.classList.add('company-section-logo')
+				img.src = data.logo;
+				img.alt = 'Company Logo';
+				resultsDiv.appendChild(img);
+			}
+			else {
+				console.log("No Logo");
+			}
+
+			var table = document.createElement('table');
+			table.classList.add('section-table');
+			var body = table.createTBody();
+
+			//Company Name
+			var row1 = body.insertRow(); 
+			var headerCell1 = document.createElement('th'); 
+			headerCell1.textContent = "Company Name";
+			row1.appendChild(headerCell1); 
+			var dataCell1 = row1.insertCell();
+			dataCell1.textContent = data.name; 
+			row1.classList.add('section-table-row');
+			row1.appendChild(dataCell1);
+
+
+			//Stock Ticker Symbol
+			var row2 = body.insertRow(); 
+			var headerCell2 = document.createElement('th'); 
+			headerCell2.textContent = "Stock Ticker Symbol";
+			row2.appendChild(headerCell2); 
+			var dataCell2 = row2.insertCell();
+			headerCell2.classList.add('section-table-row');
+			dataCell2.classList.add('section-table-row');
+			dataCell2.textContent = data.ticker; 
+			row2.appendChild(dataCell2);
+
+			//Stock Exchange Code
+			var row3 = body.insertRow(); 
+			var headerCell3 = document.createElement('th'); 
+			headerCell3.textContent = "Stock Exchange Code";
+			row3.appendChild(headerCell3); 
+			var dataCell3 = row3.insertCell();
+			dataCell3.textContent = data.exchange; 
+			headerCell3.classList.add('section-table-row');
+			dataCell3.classList.add('section-table-row');
+			row3.appendChild(dataCell3);
+
+			//Company Start Date
+			var row4 = body.insertRow(); 
+			var headerCell4 = document.createElement('th'); 
+			headerCell4.textContent = "Company Start Date";
+			row4.appendChild(headerCell4); 
+			var dataCell4 = row4.insertCell();
+			dataCell4.textContent = data.ipo; 
+			headerCell4.classList.add('section-table-row');
+			dataCell4.classList.add('section-table-row');
+			row4.appendChild(dataCell4);
+
+			//Company Start Date
+			var row5 = body.insertRow(); 
+			var headerCell5 = document.createElement('th'); 
+			headerCell5.textContent = "Category";
+			row5.appendChild(headerCell5); 
+			var dataCell5 = row5.insertCell();
+			dataCell5.textContent = data.finnhubIndustry; 
+			headerCell5.classList.add('section-table-row');
+			dataCell5.classList.add('section-table-row');
+			row5.appendChild(dataCell5);
+
+			resultsDiv.appendChild(table); 
+		}
+
+		function createStockSummaryTable(stock, rec, ticker) {
+			console.log("creating stock table");
+			var resultsDiv = document.getElementById("stock-content");
+			resultsDiv.innerHTML = ''; 
+
+			var table = document.createElement('table');
+			table.classList.add('section-table');
+			var body = table.createTBody();
+
+			//Stock Ticker Symbol
+			var row1 = body.insertRow(); 
+			var headerCell1 = document.createElement('th'); 
+			headerCell1.textContent = "Stock Ticker Symbol";
+			row1.appendChild(headerCell1); 
+			var dataCell1 = row1.insertCell();
+			dataCell1.textContent = ticker; 
+			row1.classList.add('section-table-row');
+			row1.appendChild(dataCell1);
+
+
+			//Trading Day
+			var row2 = body.insertRow(); 
+			var headerCell2 = document.createElement('th'); 
+			headerCell2.textContent = "Trading Day";
+			row2.appendChild(headerCell2); 
+			var dataCell2 = row2.insertCell();
+			headerCell2.classList.add('section-table-row');
+			dataCell2.classList.add('section-table-row');
+			dataCell2.textContent = stock.t; 
+			row2.appendChild(dataCell2);
+
+			//Previous Closing Price
+			var row3 = body.insertRow(); 
+			var headerCell3 = document.createElement('th'); 
+			headerCell3.textContent = "Previous Closing Price";
+			row3.appendChild(headerCell3); 
+			var dataCell3 = row3.insertCell();
+			dataCell3.textContent = stock.pc; 
+			headerCell3.classList.add('section-table-row');
+			dataCell3.classList.add('section-table-row');
+			row3.appendChild(dataCell3);
+
+			//Opening Price
+			var row4 = body.insertRow(); 
+			var headerCell4 = document.createElement('th'); 
+			headerCell4.textContent = "Opening Price";
+			row4.appendChild(headerCell4); 
+			var dataCell4 = row4.insertCell();
+			dataCell4.textContent = stock.o; 
+			headerCell4.classList.add('section-table-row');
+			dataCell4.classList.add('section-table-row');
+			row4.appendChild(dataCell4);
+
+			//High Price
+			var row5 = body.insertRow(); 
+			var headerCell5 = document.createElement('th'); 
+			headerCell5.textContent = "High Price";
+			row5.appendChild(headerCell5); 
+			var dataCell5 = row5.insertCell();
+			dataCell5.textContent = stock.h; 
+			headerCell5.classList.add('section-table-row');
+			dataCell5.classList.add('section-table-row');
+			row5.appendChild(dataCell5);
+
+			//Low Price
+			var row6 = body.insertRow(); 
+			var headerCell6 = document.createElement('th'); 
+			headerCell6.textContent = "Low Price";
+			row6.appendChild(headerCell6); 
+			var dataCell6 = row6.insertCell();
+			dataCell6.textContent = stock.l; 
+			headerCell6.classList.add('section-table-row');
+			dataCell6.classList.add('section-table-row');
+			row6.appendChild(dataCell6);
+
+			//Change
+			var img1 = new Image();
+			var row7 = body.insertRow(); 
+			var headerCell7 = document.createElement('th'); 
+			headerCell7.textContent = "Change";
+			row7.appendChild(headerCell7); 
+			var dataCell7 = row7.insertCell();
+			dataCell7.textContent = stock.d + "     "; 
+			if (stock.d > 0) {
+				console.log("positive change");
+				img1.src = 'static/img/GreenArrowUp.png';
+			}
+			else {
+				console.log("negative change");
+				img1.src = 'static/img/RedArrowDown.png';
+			}
+			img1.alt = 'Change';
+			img1.classList.add('stock-images');
+			dataCell7.appendChild(img1);
+			headerCell7.classList.add('section-table-row');
+			dataCell7.classList.add('section-table-row');
+			row7.appendChild(dataCell7);
+
+			//Change Percent
+			var img2 = new Image();
+			var row8 = body.insertRow(); 
+			var headerCell8 = document.createElement('th'); 
+			headerCell8.textContent = "Change Percent";
+			row8.appendChild(headerCell8); 
+			var dataCell8 = row8.insertCell();
+			dataCell8.textContent = stock.dp + "     ";
+			if (stock.dp > 0) {
+				img2.src = 'static/img/GreenArrowUp.png';
+			}
+			else {
+				img2.src = 'static/img/RedArrowDown.png';
+			}
+			img2.alt = 'Change Percent';
+			img2.classList.add('stock-images');
+			dataCell8.appendChild(img2);
+			headerCell8.classList.add('section-table-row');
+			dataCell8.classList.add('section-table-row');
+			row8.appendChild(dataCell8);
+
+			resultsDiv.appendChild(table); 
+
+			const recommendationData = {
+				"strongSell": rec.strongBuy,
+				"sell": rec.strongSell,
+				"hold": rec.hold,
+				"buy": rec.buy,
+				"strongBuy": rec.sell
+			};
+
+			const widgetContainer = document.createElement('div');
+			widgetContainer.id = 'trends-widget';
+			widgetContainer.className = 'recommendation-trends';
+			widgetContainer.style.display = 'flex'; 
+
+			const widgetWrapper = document.createElement('div');
+			widgetWrapper.id = 'widget-wrapper';
+			widgetWrapper.style.display = 'flex'; 
+			
+			const strongSellDiv = document.createElement('div');
+			strongSellDiv.className = 'strong';
+			strongSellDiv.style.color = '#FF0000'; 
+			strongSellDiv.style.marginRight = '10px'; 
+			strongSellDiv.innerHTML = 'Strong<br>Sell';
+
+			const strongBuyDiv = document.createElement('div');
+			strongBuyDiv.className = 'strong';
+			strongBuyDiv.style.color = '#008000'; 
+			strongBuyDiv.style.marginLeft = '10px'; 
+			strongBuyDiv.innerHTML = 'Strong<br>Buy'; 
+
+			widgetWrapper.appendChild(strongSellDiv);
+
+			widgetWrapper.appendChild(widgetContainer);
+
+			widgetWrapper.appendChild(strongBuyDiv);
+
+			resultsDiv.appendChild(widgetWrapper);
+
+			const categories = [
+				{ name: 'strongSell', title: 'Strong Sell', color: '#eb0e0e' },
+				{ name: 'sell', title: 'Sell', color: '#A52A2A' },
+				{ name: 'hold', title: 'Hold', color: '#397343' },
+				{ name: 'buy', title: 'Buy', color: '#3fab52' },
+				{ name: 'strongBuy', title: 'Strong Buy', color: '#5efc03' }
+			];
+
+			categories.forEach(category => {
+				const categoryDiv = document.createElement('div');
+				categoryDiv.className = `category ${category.name}`;
+				categoryDiv.textContent = `${recommendationData[category.name]}`; 
+				categoryDiv.style.backgroundColor = category.color;
+				widgetContainer.appendChild(categoryDiv);
+			});
+
+
+			var rec_title = document.createElement('p');
+			rec_title.id = 'rec_title';
+			rec_title.innerHTML = "Recommendation Trends";
+			resultsDiv.appendChild(rec_title);
+		}
+
+
+		function createChart(data, ticker) {
+			var resultsDiv = document.getElementById("charts-content");
+			resultsDiv.innerHTML = ''; 
+			const currentDate = new Date();
+			const formattedDate = currentDate.toISOString().slice(0, 10);
+
+			(async () => {
+
+				const price = [],
+					volume = [];
+
+				data.forEach(item => {
+					price.push([
+						item.t,
+						item.c  
+					]);
+
+					volume.push([
+						item.t,
+						item.v  
+					]);
+				});
+
+				Highcharts.stockChart('charts-content', {
+
+					rangeSelector: {
+						buttons: [{
+							type: 'day',
+							count: 7,
+							text: '7d'
+						}, {
+							type: 'day',
+							count: 15,
+							text: '15d'
+						}, {
+							type: 'month',
+							count: 1,
+							text: '1m'
+						}, {
+							type: 'month',
+							count: 3,
+							text: '3m'
+						}, {
+							type: 'month',
+							count: 6,
+							text: '6m'
+						}],
+						selected: 4, 
+						inputEnabled: false
+					},
+
+					title: {
+						text: 'Stock Price ' + ticker + ' ' + formattedDate
+					},
+
+					subtitle: {
+						useHTML: true,
+						text: '<a href="https://polygon.io/" target="_blank">Source: Polygon.io</a>'
+					},
+
+					yAxis: [{
+						labels: {
+							align: 'right',
+							x: -5 
+						},
+						title: {
+							text: 'Stock Price'
+						},
+						lineWidth: 0,
+						opposite: false
+						// tickInterval: 20, 
+						// tickPixelInterval: 20 
+					}, {
+						labels: {
+							align: 'left',
+							x: 5 
+						},
+						title: {
+							text: 'Volume'
+						},
+						lineWidth: 0,
+						opposite: true
+						// tickInterval: 80000000 
+					}],
+					plotOptions: {
+						series: {
+							// maxPointLength: 2
+						},
+						column: {
+							pointPadding: 0.1,
+							groupPadding: 0.1,
+							borderWidth: 0,
+							pointWidth: 4
+						}
+					},
+					tooltip: {
+						split: true
+					},
+
+					series: [{
+						type: 'area',
+						name: 'Stock Price',
+						data: price,
+						yAxis: 0
+					}, {
+						type: 'column',
+						name: 'Volume',
+						data: volume,
+						yAxis: 1,
+						color: 'black' 
+					}],
+
+					exporting: {
+						enabled: true 
+					}
+				});
+			})();
+		}
+
+		function createNews(data) {
+			var resultsDiv = document.getElementById("news-content");
+			resultsDiv.innerHTML = ''; 
+
+			data.forEach(function(article) {
+				var articleDiv = document.createElement('div');
+				articleDiv.id = "article-div";
+				
+				var img = document.createElement('img');
+				img.src = article.image;
+				
+				var textDiv = document.createElement('div');
+				textDiv.id = "text-div";
+				
+				var headline = document.createElement('h3');
+				headline.textContent = article.headline;
+
+				var date = document.createElement('p');
+				date.textContent = new Date(article.datetime * 1000).toLocaleDateString(); 
+				
+				var link = document.createElement('a');
+				link.href = article.url;
+				link.textContent = 'See Original Post';
+				link.target = '_blank'; 
+				
+				textDiv.appendChild(headline);
+				textDiv.appendChild(date);
+				textDiv.appendChild(link);
+				
+				articleDiv.appendChild(img);
+				articleDiv.appendChild(textDiv);
+				
+				resultsDiv.appendChild(articleDiv);
+			});
+		}
+
+	</script>
+</body>
+</html>

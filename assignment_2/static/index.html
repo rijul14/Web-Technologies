@@ -65,7 +65,8 @@
 					searchInput.reportValidity();
 				} else {
 					allData = {};
-					var ticker = searchInput.value;
+					var ticker_val = searchInput.value;
+					var ticker = ticker_val.toUpperCase();
 					var urls = {
 						company: `/company?ticker=${ticker}`,
 						stock: `/stock?ticker=${ticker}`,

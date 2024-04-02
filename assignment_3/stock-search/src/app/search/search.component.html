@@ -1,0 +1,180 @@
+<div class="container text-center my-4">
+    <div *ngIf="isLoading && displayContent" class="d-flex justify-content-center mt-4">
+        <mat-spinner [diameter]="40"></mat-spinner>
+    </div>
+    <div *ngIf="!isLoading && displayContent">
+        <div class="container mt-4">
+            <div class="row justify-content-center">
+              <div *ngIf="showFavoriteMessage" class="col-12 col-md-10 watchlist-message">
+                <span>{{profileData.ticker}} added to Watchlist.</span>
+                <button class="watchlist-close-button" (click)="hideMessage()">&times;</button>
+              </div>
+              <div *ngIf="showFavRemoveMessage" class="col-12 col-md-10 watchlist-remove-message">
+                <span>{{profileData.ticker}} removed from Watchlist.</span>
+                <button class="watchlist-close-button" (click)="hideMessage()">&times;</button>
+              </div>
+            </div>
+            <!-- Rest of your form and other content below -->
+        </div> 
+        <div class="row mt-3 justify-content-center align-items-start">
+        <!-- Left Side Content -->
+        <div class="col-4">
+            <h2>{{ profileData.ticker }} 
+                <button class="btn p-0" (click)="toggleFavorite()">
+                    <i class="fa-star" [ngClass]="{'fas': isFavorite, 'far': !isFavorite}"></i>
+                </button>
+            </h2>
+            <div>{{ profileData.name }}</div>
+            <div class="text-secondary">{{ profileData.exchange }}</div>
+            <button class="btn btn-success mt-2">Buy</button>
+        </div>
+    
+        <!-- Center Content with Logo and Market Status -->
+        <div class="col-4">
+            <img *ngIf="profileData.logo" [src]="profileData.logo" class="img-fluid" alt="Company Logo">
+            <div class = "center-market-status mt-3 d-none d-md-block" [ngStyle]="{'color': isMarketOpen ? 'green' : 'red'}">
+                {{ marketStatusMessage }}
+            </div>
+        </div>
+    
+        <!-- Right Side Content with Price -->
+        <div id="right-side" class="col-4">
+            <div *ngIf="quoteData" [ngClass]="{'text-danger': quoteData.d < 0, 'text-success': quoteData.d > 0}" class="display-4">{{ quoteData.c }}</div>
+            <div *ngIf="quoteData" [ngClass]="{'text-danger': quoteData.d < 0, 'text-success': quoteData.d > 0}">
+                <img id="arrow" [src]="quoteData.d >= 0 ? '../../assets/GreenArrowUp.png' : '../../assets/RedArrowDown.png'" alt="Trend">
+                {{ quoteData.d }} ({{ quoteData.dp | number: '1.2-2' }}%)
+            </div>
+            <div class="text-secondary">{{ currentDateTime | date: 'yyyy-MM-dd HH:mm:ss' }}</div>
+        </div>
+
+        <div class="col-12 d-md-none mt-3" [ngStyle]="{'color': isMarketOpen ? 'green' : 'red'}">
+            {{ marketStatusMessage }}
+        </div>
+        </div>
+    </div>
+  </div>
+  <div class="container text-center text-md-start my-4">
+    <div *ngIf="!isLoading && displayContent">
+        <mat-tab-group (selectedIndexChange)="onTabChange($event)">
+            <mat-tab label="Summary">
+                <div class="row mt-4">
+                    <!-- Values and About Section -->
+                    <div class="col-12 col-md-6">
+                        <!-- Price Information -->
+                        <div class="mt-3 price-data">
+                            <div class="price-info">
+                                <p><strong>High Price:</strong> {{ quoteData.h }}</p>
+                                <p><strong>Low Price:</strong> {{ quoteData.l }}</p>
+                                <p><strong>Open Price:</strong> {{ quoteData.o }}</p>
+                                <p><strong>Prev. Close:</strong> {{ quoteData.pc }}</p>
+                            </div>
+                        </div>
+
+                        <!-- About the Company Information -->
+                        <div class="mt-5 about-company text-center">
+                            <h6 class="about-title mb-4">About the company</h6>
+                            <p><strong>IPO Start Date:</strong> {{ profileData.ipo }}</p>
+                            <p><strong>Industry:</strong> {{ profileData.finnhubIndustry }}</p>
+                            <p><strong>Webpage: </strong>
+                                <a href="{{ profileData.weburl }}" target="_blank" class="company-webpage">{{ profileData.weburl }}</a>
+                            </p>
+                            <p><strong>Company Peers:</strong></p>
+                            <ng-container *ngFor="let peer of peerCompanies; let i = index">
+                                <a href="#" (click)="onPeerClick(peer, $event)">{{ peer }}</a><span *ngIf="i < peerCompanies.length - 1">, </span>
+                            </ng-container>
+                        </div>
+                    </div>
+
+                    <!-- Chart Section -->
+                    <div class="col-12 col-md-6 mt-5 mt-md-0">
+                        <highcharts-chart
+                            *ngIf="chartOptions"
+                            [Highcharts]="Highcharts"
+                            [options]="chartOptions"
+                            [update]="updateFlag"
+                            style="width: 100%; height: 400px; display: block;"
+                            >
+                        </highcharts-chart>
+                    </div>
+                </div>
+            </mat-tab>       
+            <mat-tab label="Top News">
+                <div class="news-grid">
+                  <div *ngFor="let article of newsArticles; let i = index" class="news-item mt-2" [class.odd]="i % 2 === 0" (click)="openDialog(article)">
+                    <div class="news-image-container">
+                      <img [src]="article.image" alt="News thumbnail" class="news-image pt-md-3 pl-md-3">
+                    </div>
+                    <div class="news-content">
+                      <h3 class="news-headline">{{ article.headline }}</h3>
+                      <!-- The truncate pipe cuts off the text if it's too long -->
+                    </div>
+                  </div>
+                </div>
+            </mat-tab>
+            <mat-tab label="Charts"> Content 3 </mat-tab>
+            <mat-tab label="Insights">
+                <div class="container-fluid">
+                    <!-- Sentiment Table -->
+                    <div class="row">
+                      <div class="col-12">
+                        <div class="sentiment-table-container">
+                            <table mat-table class="sentiment-table">
+                            <!-- Table headers -->
+                            <tr>
+                                <th>{{ profileData.name }}</th>
+                                <th>MSPR</th>
+                                <th>Change</th>
+                            </tr>
+                        
+                            <!-- Total row -->
+                            <tr>
+                                <td><strong>Total</strong></td>
+                                <td>{{ getTotalMspr() | number:'1.2-2' }}</td>
+                                <td>{{ getTotalChange() }}</td>
+                            </tr>
+                        
+                            <!-- Positive row -->
+                            <tr>
+                                <td><strong>Positive</strong></td>
+                                <td>{{ getPositiveMspr() | number:'1.2-2' }}</td>
+                                <td>{{ getPositiveChange() }}</td>
+                            </tr>
+                        
+                            <!-- Negative row -->
+                            <tr>
+                                <td><strong>Negative</strong></td>
+                                <td>{{ getNegativeMspr() | number:'1.2-2' }}</td>
+                                <td>{{ getNegativeChange() }}</td>
+                            </tr>
+                            </table>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="row">
+                        <!-- Chart 1 container -->
+                        <div class="col-12 col-md-6">
+                          <highcharts-chart 
+                            class="insights-charts mt-4 px-md-2"
+                            *ngIf="chartOptions1"
+                            [Highcharts]="Highcharts" 
+                            [options]="chartOptions1"
+                            style="width: 100%; height: 400px; display: block;">
+                          </highcharts-chart>
+                        </div>
+                        <!-- Chart 2 container -->
+                        <div class="col-12 col-md-6">
+                          <highcharts-chart 
+                            class="insights-charts mt-0 mt-md-4 px-md-2"
+                            *ngIf="chartOptions2"
+                            [Highcharts]="Highcharts" 
+                            [options]="chartOptions2"
+                            style="width: 100%; height: 400px; display: block;">
+                          </highcharts-chart>
+                        </div>
+                    </div>
+                </div>
+            </mat-tab>
+        </mat-tab-group>
+    </div>
+</div>
+  

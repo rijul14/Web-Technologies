@@ -1,0 +1,36 @@
+<div class="watchlist-container mt-4">
+    <h2>My Watchlist</h2>
+    <div *ngIf="isLoading" class="d-flex justify-content-center mt-4">
+        <mat-spinner [diameter]="40"></mat-spinner>
+    </div>
+    <ng-container *ngIf="!isLoading">
+        <div class="container mt-4">
+            <div class="row justify-content-center">
+            <div *ngIf="watchlist.length === 0" class="col-12 col-md-10 watchlist-empty">
+                <span>Currently you don't have any stock in your watchlist.</span>
+            </div>
+            </div>
+            <!-- Rest of your form and other content below -->
+        </div> 
+        <ng-container *ngIf="watchlist.length > 0">
+            <div *ngFor="let item of watchlist" class="watchlist-item mt-3" (click)="navigateToSearch(item.ticker)">
+            <button class="close-button" (click)="removeFromWatchlist(item.ticker, $event)">×</button>
+            <div class="left">
+                <div class="ticker mt-4">{{ item.ticker }}</div>
+                <div class="name">{{ item.name }}</div>
+            </div>
+            <div class="right mr-2 mr-md-5" [ngClass]="{
+                'text-green': item.change > 0,
+                'text-red': item.change < 0,
+                'text-black': item.change === 0
+                }">
+                <div class="current-price mt-4">{{ item.currentPrice | number:'1.2-2' }}</div>
+                <div class="change">
+                <img [src]="item.change >= 0 ? 'assets/GreenArrowUp.png' : 'assets/RedArrowDown.png'" alt="{{ item.change >= 0 ? 'Up' : 'Down' }}">
+                {{ item.change | number:'1.2-2' }} ({{ item.percentChange | number:'1.2-2' }}%)
+                </div>
+            </div>
+            </div>
+        </ng-container>
+    </ng-container>
+</div>

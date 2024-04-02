@@ -1,0 +1,31 @@
+<div mat-dialog-content class="modal-header">
+    <h2 mat-dialog-title class="source-title">{{ data.article.source }}</h2>
+    <p class="publish-date ml-3">{{ articleDate | date: 'MMMM d, y' }}</p>
+    <hr>
+    <mat-dialog-actions class="close-button" [mat-dialog-close]="true">
+        <i class="fa fa-times"></i>
+    </mat-dialog-actions>
+</div>
+<div class="modal-content justify-content-center">
+    <h3 class="headline font-weight-bold px-3">{{ data.article.headline }}</h3>
+    <p class="summary px-3">{{ data.article.summary }}</p>
+    <p class="link px-3">
+        For more details click <a href="{{ data.article.url }}" target="_blank" rel="noopener">here</a>.
+    </p>
+    <div class="share-box">
+        <!-- Share links with icons -->
+        <p class="p-3">Share </p>
+        <div class="social-icons">
+            <a href="https://twitter.com/intent/tweet?text={{ encodeURIComponent(data.article.headline) }}&url={{ encodeURIComponent(data.article.url) }}" target="_blank" class="twitter-share-button">
+                <i class="fa-brands fa-x-twitter"></i>
+            </a>
+            <!-- <a href="https://twitter.com/intent/tweet?button_hashtag=Icon&ref_src=twsrc%5Etfw" class="twitter-hashtag-button" data-show-count="false">Tweet #Icon</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script> -->
+              
+              <!-- Updated Facebook share link -->
+            <a href="https://www.facebook.com/sharer/sharer.php?u={{ encodeURIComponent(data.article.url) }}" target="_blank" class="fb-share-button">
+                <i class="fab fa-facebook-f"></i>
+            </a>
+        </div>
+    </div>
+</div>
+  
